@@ -20,7 +20,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
+  // SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
@@ -36,7 +36,6 @@ const data = {
       title: "Downlist",
       url: "/dashboard/downlist",
       icon: IconDownload,
-      badge: "3",
     },
     {
       title: "Speweek",
@@ -82,9 +81,9 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
                       <span>{item.title}</span>
                     </a>
                   </SidebarMenuButton>
-                  {item.badge && (
+                  {/* {item.badge && (
                     <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
-                  )}
+                  )} */}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
