@@ -105,7 +105,7 @@ const initialData: DownlistItem[] = [
 // Simulate Review table membership (IDs present here are "watched")
 const reviewedIds = new Set<string>(["4", "7"]);
 
-export default function Downlist() {
+export default function DownlistPage() {
   const [rows, setRows] = useState<DownlistItem[]>(initialData);
   const [activeTab, setActiveTab] = useState("All");
 
@@ -264,34 +264,33 @@ export default function Downlist() {
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="flex items-center justify-between py-4">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Downlist Manager
-            </h1>
-          </div>
-
-          <Tabs
-            defaultValue="All"
-            className="w-full"
-            onValueChange={setActiveTab}
-          >
-            <TabsList>
-              <TabsTrigger value="All">All</TabsTrigger>
-              <TabsTrigger value="Downloaded">Downloaded</TabsTrigger>
-              <TabsTrigger value="NotDownloaded">Not Downloaded</TabsTrigger>
-              <TabsTrigger value="Watched">Watched</TabsTrigger>
-              <TabsTrigger value="NotWatched">Not Watched</TabsTrigger>
-            </TabsList>
+        <SiteHeader name="Downlist" />
+        <Tabs
+          defaultValue="All"
+          className="w-full"
+          onValueChange={setActiveTab}
+        >
+          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+            <div className="flex items-center justify-between py-4">
+              <h1 className="text-2xl font-bold tracking-tight">
+                Downlist Manager
+              </h1>
+              <TabsList>
+                <TabsTrigger value="All">All</TabsTrigger>
+                <TabsTrigger value="Downloaded">Downloaded</TabsTrigger>
+                <TabsTrigger value="NotDownloaded">Not Downloaded</TabsTrigger>
+                <TabsTrigger value="Watched">Watched</TabsTrigger>
+                <TabsTrigger value="NotWatched">Not Watched</TabsTrigger>
+              </TabsList>
+            </div>
 
             <DataTable
               columns={columns}
               data={filteredData}
               filterKey="title"
             />
-          </Tabs>
-        </div>
+          </div>
+        </Tabs>
       </SidebarInset>
     </SidebarProvider>
   );
