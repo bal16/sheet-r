@@ -1,12 +1,15 @@
 "use client";
 
 import { useMemo, useState, type CSSProperties } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowUpDown,
   Download,
   Eye,
   MoreHorizontal,
   Pencil,
+  Plus,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 
@@ -20,146 +23,96 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+
 import { AppSidebar } from "@/features/admin/components/app-sidebar";
 import { DataTable } from "@/features/admin/components/data-table";
 import { SiteHeader } from "@/features/admin/components/site-header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
-type DownlistItem = {
-  id: string;
-  title: string;
-  year: number;
-  is_downloaded: boolean;
-  // is_watched is derived from Review table (do not toggle directly here)
-  is_watched: boolean;
-};
-
-// Demo data
-const initialData: DownlistItem[] = [
-  {
-    id: "1",
-    title: "Dune: Part Two",
-    year: 2024,
-    is_downloaded: true,
-    is_watched: false,
-  },
-  {
-    id: "2",
-    title: "Poor Things",
-    year: 2023,
-    is_downloaded: false,
-    is_watched: false,
-  },
-  {
-    id: "3",
-    title: "The Boy and the Heron",
-    year: 2023,
-    is_downloaded: false,
-    is_watched: false,
-  },
-  {
-    id: "4",
-    title: "Oppenheimer",
-    year: 2023,
-    is_downloaded: true,
-    is_watched: false,
-  },
-  {
-    id: "5",
-    title: "Past Lives",
-    year: 2023,
-    is_downloaded: false,
-    is_watched: false,
-  },
-  {
-    id: "6",
-    title: "Anatomy of a Fall",
-    year: 2023,
-    is_downloaded: true,
-    is_watched: false,
-  },
-  {
-    id: "7",
-    title: "Killers of the Flower Moon",
-    year: 2023,
-    is_downloaded: true,
-    is_watched: false,
-  },
-  {
-    id: "8",
-    title: "Barbie",
-    year: 2023,
-    is_downloaded: false,
-    is_watched: false,
-  },
-  {
-    id: "9",
-    title: "Godzilla Minus One",
-    year: 2023,
-    is_downloaded: false,
-    is_watched: false,
-  },
-];
-
-// Simulate Review table membership (IDs present here are "watched")
-const reviewedIds = new Set<string>(["4", "7"]);
+import { useDownlist, DownlistItem } from "@/features/admin/hooks/use-downlist";
+import {
+  downlistFormSchema,
+  type DownlistFormValues,
+} from "@/features/admin/schemas/downlistFormSchema";
 
 export default function DownlistPage() {
-  const [rows, setRows] = useState<DownlistItem[]>(initialData);
-  const [activeTab, setActiveTab] = useState("All");
+  const {
+    data: rows = [],
+    isLoading,
+    addDownlist,
+    editDownlist,
+    toggleDownloaded: toggleMutation,
+  } = useDownlist();
 
-  // Compute is_watched from Review table
-  const computedRows = useMemo(
-    () => rows.map((r) => ({ ...r, is_watched: reviewedIds.has(r.id) })),
-    [rows]
-  );
+  const [activeTab, setActiveTab] = useState("All");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const form = useForm<DownlistFormValues>({
+    resolver: zodResolver(downlistFormSchema),
+    defaultValues: {
+      title: "",
+      year: new Date().getFullYear(),
+    },
+  });
+
+  const handleAdd = () => {
+    setEditingId(null);
+    form.reset({ title: "", year: new Date().getFullYear() });
+    setIsDialogOpen(true);
+  };
+
+  const handleEdit = (item: DownlistItem) => {
+    setEditingId(item.id);
+    form.reset({ title: item.title, year: item.year });
+    setIsDialogOpen(true);
+  };
+
+  const onSubmit = async (values: DownlistFormValues) => {
+    if (editingId) {
+      await editDownlist({ id: editingId, ...values });
+    } else {
+      await addDownlist(values);
+    }
+    setIsDialogOpen(false);
+  };
 
   const filteredData = useMemo(() => {
     switch (activeTab) {
       case "Downloaded":
-        return computedRows.filter((r) => r.is_downloaded);
+        return rows.filter((r) => r.is_downloaded);
       case "NotDownloaded":
-        return computedRows.filter((r) => !r.is_downloaded);
+        return rows.filter((r) => !r.is_downloaded);
       case "Watched":
-        return computedRows.filter((r) => r.is_watched);
+        return rows.filter((r) => r.is_watched);
       case "NotWatched":
-        return computedRows.filter((r) => !r.is_watched);
+        return rows.filter((r) => !r.is_watched);
       default:
-        return computedRows;
+        return rows;
     }
-  }, [activeTab, computedRows]);
+  }, [activeTab, rows]);
 
   const toggleDownloaded = (id: string, value: boolean) => {
-    setRows((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, is_downloaded: value } : r))
-    );
+    toggleMutation({ id, is_downloaded: value });
   };
 
   const columns: ColumnDef<DownlistItem>[] = [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-      size: 32,
-    },
     {
       accessorKey: "title",
       header: ({ column }) => {
@@ -179,8 +132,19 @@ export default function DownlistPage() {
     },
     {
       accessorKey: "year",
-      header: "Year",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Year
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        );
+      },
       cell: ({ row }) => <div>{row.getValue("year") as number}</div>,
+      enableSorting: true,
     },
     {
       id: "is_downloaded",
@@ -204,16 +168,15 @@ export default function DownlistPage() {
       id: "is_watched",
       header: "Watched",
       cell: ({ row }) => {
-        const watched = reviewedIds.has(row.original.id);
         return (
           <div className="flex items-center">
             <Checkbox
-              checked={watched}
+              checked={row.original.is_watched}
               disabled
               aria-label="Watched (from reviews)"
             />
             <span className="ml-2 text-xs text-muted-foreground">
-              {watched ? "Yes" : "No"}
+              {row.original.is_watched ? "Yes" : "No"}
             </span>
           </div>
         );
@@ -242,6 +205,9 @@ export default function DownlistPage() {
               <DropdownMenuSeparator />
               <DropdownMenuItem>
                 <Eye className="mr-2 h-4 w-4" /> View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Pencil className="mr-2 h-4 w-4" /> Write Review
@@ -275,22 +241,86 @@ export default function DownlistPage() {
               <h1 className="text-2xl font-bold tracking-tight">
                 Downlist Manager
               </h1>
-              <TabsList>
-                <TabsTrigger value="All">All</TabsTrigger>
-                <TabsTrigger value="Downloaded">Downloaded</TabsTrigger>
-                <TabsTrigger value="NotDownloaded">Not Downloaded</TabsTrigger>
-                <TabsTrigger value="Watched">Watched</TabsTrigger>
-                <TabsTrigger value="NotWatched">Not Watched</TabsTrigger>
-              </TabsList>
+              <Button onClick={handleAdd}>
+                <Plus className="mr-2 h-4 w-4" /> Add Downlist
+              </Button>
             </div>
+            <TabsList>
+              <TabsTrigger value="All">All</TabsTrigger>
+              <TabsTrigger value="Downloaded">Downloaded</TabsTrigger>
+              <TabsTrigger value="NotDownloaded">Not Downloaded</TabsTrigger>
+              <TabsTrigger value="Watched">Watched</TabsTrigger>
+              <TabsTrigger value="NotWatched">Not Watched</TabsTrigger>
+            </TabsList>
 
             <DataTable
               columns={columns}
               data={filteredData}
               filterKey="title"
+              isLoading={isLoading}
             />
           </div>
         </Tabs>
+
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {editingId ? "Edit Movie" : "Add Movie"}
+              </DialogTitle>
+              <DialogDescription>
+                {editingId
+                  ? "Edit the details of the movie."
+                  : "Add a new movie to your downlist."}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <div className="grid gap-4 py-4">
+                <FieldGroup>
+                  <Controller
+                    control={form.control}
+                    name="title"
+                    render={({ field, fieldState }) => (
+                      <Field
+                        className="grid grid-cols-4 items-center gap-4"
+                        data-invalid={fieldState.invalid}
+                      >
+                        <FieldLabel className="text-right">Title</FieldLabel>
+                        <div className="col-span-3">
+                          <Input id="title" {...field} />
+                          {fieldState.invalid && (
+                            <FieldError errors={[fieldState.error]} />
+                          )}
+                        </div>
+                      </Field>
+                    )}
+                  />
+                  <Controller
+                    control={form.control}
+                    name="year"
+                    render={({ field, fieldState }) => (
+                      <Field
+                        className="grid grid-cols-4 items-center gap-4"
+                        data-invalid={fieldState.invalid}
+                      >
+                        <FieldLabel className="text-right">Year</FieldLabel>
+                        <div className="col-span-3">
+                          <Input id="year" type="number" {...field} />
+                          {fieldState.invalid && (
+                            <FieldError errors={[fieldState.error]} />
+                          )}
+                        </div>
+                      </Field>
+                    )}
+                  />
+                </FieldGroup>
+              </div>
+              <DialogFooter>
+                <Button type="submit">Save changes</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </SidebarInset>
     </SidebarProvider>
   );
