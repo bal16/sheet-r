@@ -2,7 +2,7 @@
 
 import { Loader2, LogIn, LogOut } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
 
 export const SignInButton = () => {
   const { data: session, isPending } = authClient.useSession();
