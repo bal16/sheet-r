@@ -1,16 +1,35 @@
-"use client";
-
-import { authClient } from "@/libs/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Film, Github, Table, ShieldCheck, Zap } from "lucide-react";
 import Link from "next/link";
+import { SignInButton } from "@/components/SignInButton";
+
+const FEATURES = [
+  {
+    icon: Table,
+    title: "Spreadsheet Backend",
+    content:
+      "CRUD operations directly to Google Sheets. No SQL database required.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Owner-Only Access",
+    content:
+      "Strict whitelist logic ensures only you can access the admin dashboard.",
+  },
+  {
+    icon: Zap,
+    title: "Static Performance",
+    content: "Reviews are fetched at build time. The site loads instantly.",
+  },
+];
+
+const TECH = ["Next.js", "Google Sheets API", "Better-Auth", "Tailwind"];
+const GITHUB_URL = "https://github.com";
 
 export default function Home() {
-  const { data: session } = authClient.useSession();
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-indigo-500/30">
       {/* Header */}
@@ -25,26 +44,12 @@ export default function Home() {
             className="hidden sm:flex gap-2 text-slate-400 hover:text-slate-100 hover:bg-slate-900"
             asChild
           >
-            <Link href="https://github.com">
+            <Link href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
               <Github className="h-4 w-4" />
               Github
             </Link>
           </Button>
-          {session ? (
-            <Button
-              onClick={() => authClient.signOut()}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500/50 shadow-[0_0_15px_rgba(79,70,229,0.3)]"
-            >
-              Sign Out
-            </Button>
-          ) : (
-            <Button
-              onClick={() => authClient.signIn.social({ provider: "google" })}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500/50 shadow-[0_0_15px_rgba(79,70,229,0.3)]"
-            >
-              Sign In
-            </Button>
-          )}
+          <SignInButton />
         </div>
       </header>
 
@@ -70,48 +75,31 @@ export default function Home() {
             >
               View Reviews
             </Button>
-            <Button variant="outline" size="lg" className="h-12 px-8 bg-foreground ">
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-12 px-8 bg-foreground "
+            >
               How It Works
             </Button>
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-8 opacity-80">
-            {["Next.js", "Google Sheets API", "Better-Auth", "Tailwind"].map(
-              (tech) => (
-                <Badge
-                  key={tech}
-                  variant="secondary"
-                  className="bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800"
-                >
-                  {tech}
-                </Badge>
-              )
-            )}
+            {TECH.map((tech) => (
+              <Badge
+                key={tech}
+                variant="secondary"
+                className="bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800"
+              >
+                {tech}
+              </Badge>
+            ))}
           </div>
         </div>
 
         {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-24 w-full max-w-6xl text-left">
-          {[
-            {
-              icon: Table,
-              title: "Spreadsheet Backend",
-              content:
-                "CRUD operations directly to Google Sheets. No SQL database required.",
-            },
-            {
-              icon: ShieldCheck,
-              title: "Owner-Only Access",
-              content:
-                "Strict whitelist logic ensures only you can access the admin dashboard.",
-            },
-            {
-              icon: Zap,
-              title: "Static Performance",
-              content:
-                "Reviews are fetched at build time. The site loads instantly.",
-            },
-          ].map((feature, i) => (
+          {FEATURES.map((feature, i) => (
             <Card
               key={i}
               className="bg-slate-900/50 border-slate-800 backdrop-blur-sm"
