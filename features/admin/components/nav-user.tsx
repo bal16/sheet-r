@@ -1,6 +1,8 @@
 "use client";
 
 import { IconDotsVertical, IconLogout } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useEffect } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -18,11 +20,11 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
-import { useMemo } from "react";
 import { getInitials } from "../utils";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
+  const router = useRouter();
 
   const { data: session, isPending } = authClient.useSession();
 
@@ -35,9 +37,20 @@ export function NavUser() {
     };
   }, [isPending, session]);
 
+  useEffect(() => {
+    if (!isPending && !user) {
+      router.replace("/");
+    }
+  }, [isPending, user, router]);
+
   if (isPending || !user) {
+    return "loading...";
+  }
+
+  if (!user && !isPending) {
     return null;
   }
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -49,7 +62,6 @@ export function NavUser() {
             >
               <Avatar className="h-8 w-8 rounded-lg grayscale">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                {/* Use initials instead of hardcoded "CN" */}
                 <AvatarFallback className="rounded-lg">
                   {getInitials(user.name)}
                 </AvatarFallback>
@@ -73,7 +85,6 @@ export function NavUser() {
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  {/* Show initials from first and last name */}
                   <AvatarFallback className="rounded-lg">
                     {getInitials(user.name)}
                   </AvatarFallback>
