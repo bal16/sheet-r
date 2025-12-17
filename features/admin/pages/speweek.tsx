@@ -3,7 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Calendar, Check, Plus, Trash2 } from "lucide-react";
+import { Calendar, Check, Plus, Star, Trash2 } from "lucide-react";
 
 import { AppSidebar } from "@/features/admin/components/app-sidebar";
 import { SiteHeader } from "@/features/admin/components/site-header";
@@ -41,6 +41,9 @@ import {
   type EventFormValues,
   type MovieFormValues,
 } from "@/features/admin/schemas/speweekFormSchema";
+import { ReviewDialog } from "@/features/admin/components/review-dialog";
+import { useReviews } from "@/features/admin/hooks/use-reviews";
+import { type ReviewFormValues } from "@/features/admin/schemas/reviewFormSchema";
 
 export default function SpeweekPage() {
   const {
@@ -50,9 +53,13 @@ export default function SpeweekPage() {
     addMovie,
     removeMovie,
   } = useSpeweek();
+  const { addReview } = useReviews();
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [isAddMovieOpen, setIsAddMovieOpen] = useState(false);
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [reviewInitialData, setReviewInitialData] =
+    useState<ReviewFormValues | null>(null);
 
   const eventForm = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
@@ -88,6 +95,16 @@ export default function SpeweekPage() {
     setSelectedEventId(eventId);
     movieForm.reset({ title: "", year: new Date().getFullYear() });
     setIsAddMovieOpen(true);
+  };
+
+  const handleReview = (movieTitle: string) => {
+    setReviewInitialData({ title: movieTitle, rating: 0 });
+    setIsReviewDialogOpen(true);
+  };
+
+  const onReviewSubmit = async (values: ReviewFormValues) => {
+    values.title = values.title.split(" (")[0];
+    await addReview(values);
   };
 
   return (
@@ -243,19 +260,29 @@ export default function SpeweekPage() {
                                   {movie.title_year}
                                 </span>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() =>
-                                  removeMovie({
-                                    eventId: event.id,
-                                    movieId: movie.id,
-                                  })
-                                }
-                              >
-                                <Trash2 className="h-3 w-3 text-destructive" />
-                              </Button>
+                              <div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => handleReview(movie.title_year)}
+                                >
+                                  <Star className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() =>
+                                    removeMovie({
+                                      eventId: event.id,
+                                      movieId: movie.id,
+                                    })
+                                  }
+                                >
+                                  <Trash2 className="h-3 w-3 text-destructive" />
+                                </Button>
+                              </div>
                             </li>
                           ))}
                         </ul>
@@ -338,6 +365,14 @@ export default function SpeweekPage() {
               </form>
             </DialogContent>
           </Dialog>
+
+          <ReviewDialog
+            open={isReviewDialogOpen}
+            onOpenChange={setIsReviewDialogOpen}
+            onSubmit={onReviewSubmit}
+            initialData={reviewInitialData}
+            title="Write Review"
+          />
         </div>
       </SidebarInset>
     </SidebarProvider>

@@ -10,6 +10,7 @@ import {
   MoreHorizontal,
   Pencil,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 
@@ -50,6 +51,19 @@ import {
   downlistFormSchema,
   type DownlistFormValues,
 } from "@/features/admin/schemas/downlistFormSchema";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { ReviewDialog } from "@/features/admin/components/review-dialog";
+import { useReviews } from "@/features/admin/hooks/use-reviews";
+import { type ReviewFormValues } from "@/features/admin/schemas/reviewFormSchema";
 
 export default function DownlistPage() {
   const {
@@ -58,11 +72,18 @@ export default function DownlistPage() {
     addDownlist,
     editDownlist,
     toggleDownloaded: toggleMutation,
+    deleteDownlist,
   } = useDownlist();
+  const { addReview } = useReviews();
 
   const [activeTab, setActiveTab] = useState("All");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [reviewToDelete, setReviewToDelete] = useState<string | null>(null);
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [reviewInitialData, setReviewInitialData] =
+    useState<ReviewFormValues | null>(null);
 
   const form = useForm<DownlistFormValues>({
     resolver: zodResolver(downlistFormSchema),
@@ -82,6 +103,19 @@ export default function DownlistPage() {
     setEditingId(item.id);
     form.reset({ title: item.title, year: item.year });
     setIsDialogOpen(true);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setReviewToDelete(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (reviewToDelete) {
+      await deleteDownlist(reviewToDelete);
+      setIsDeleteDialogOpen(false);
+      setReviewToDelete(null);
+    }
   };
 
   const onSubmit = async (values: DownlistFormValues) => {
@@ -111,6 +145,15 @@ export default function DownlistPage() {
   const toggleDownloaded = (id: string, value: boolean) => {
     // send desired value to server
     toggleMutation({ id, is_downloaded: value });
+  };
+
+  const handleReview = (item: DownlistItem) => {
+    setReviewInitialData({ title: item.title, rating: 0 });
+    setIsReviewDialogOpen(true);
+  };
+
+  const onReviewSubmit = async (values: ReviewFormValues) => {
+    await addReview(values);
   };
 
   const columns: ColumnDef<DownlistItem>[] = [
@@ -210,8 +253,15 @@ export default function DownlistPage() {
               <DropdownMenuItem onClick={() => handleEdit(row.original)}>
                 <Pencil className="mr-2 h-4 w-4" /> Edit
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleReview(row.original)}>
                 <Pencil className="mr-2 h-4 w-4" /> Write Review
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => handleDeleteClick(row.original.id)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -322,6 +372,38 @@ export default function DownlistPage() {
             </form>
           </DialogContent>
         </Dialog>
+
+        <ReviewDialog
+          open={isReviewDialogOpen}
+          onOpenChange={setIsReviewDialogOpen}
+          onSubmit={onReviewSubmit}
+          initialData={reviewInitialData}
+          title="Write Review"
+        />
+
+        <AlertDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the
+                review from your archive.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </SidebarInset>
     </SidebarProvider>
   );

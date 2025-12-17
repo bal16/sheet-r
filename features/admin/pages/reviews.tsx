@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { Controller, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowUpDown,
   MoreHorizontal,
@@ -22,14 +20,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -39,24 +29,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 import { AppSidebar } from "@/features/admin/components/app-sidebar";
 import { DataTable } from "@/features/admin/components/data-table";
 import { SiteHeader } from "@/features/admin/components/site-header";
+import { ReviewDialog } from "@/features/admin/components/review-dialog";
 
 import { useReviews, type Review } from "@/features/admin/hooks/use-reviews";
-import {
-  reviewFormSchema,
-  type ReviewFormValues,
-} from "@/features/admin/schemas/reviewFormSchema";
+import { type ReviewFormValues } from "@/features/admin/schemas/reviewFormSchema";
 
 export default function ReviewsPage() {
   const {
@@ -71,26 +52,13 @@ export default function ReviewsPage() {
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [reviewToDelete, setReviewToDelete] = useState<string | null>(null);
 
-  const form = useForm<ReviewFormValues>({
-    resolver: zodResolver(reviewFormSchema),
-    defaultValues: {
-      title: "",
-      rating: 0,
-    },
-  });
-
   const handleAdd = () => {
     setSelectedReview(null);
-    form.reset({ title: "", rating: 0 });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (review: Review) => {
     setSelectedReview(review);
-    form.reset({
-      title: review.title,
-      rating: review.rating,
-    });
     setIsDialogOpen(true);
   };
 
@@ -113,7 +81,6 @@ export default function ReviewsPage() {
     } else {
       await addReview(values);
     }
-    setIsDialogOpen(false);
   };
 
   const columns: ColumnDef<Review>[] = [
@@ -133,7 +100,6 @@ export default function ReviewsPage() {
       cell: ({ row }) => (
         <div className="font-medium">{row.getValue("title")}</div>
       ),
-      
     },
     {
       accessorKey: "rating",
@@ -231,76 +197,18 @@ export default function ReviewsPage() {
             isLoading={isLoading}
           />
 
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {selectedReview ? "Edit Review" : "Add Manual Review"}
-                </DialogTitle>
-                <DialogDescription>
-                  {selectedReview
-                    ? "Update your review details."
-                    : "Add a review for a movie not in your lists."}
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
-                <div className="grid gap-4 py-4">
-                  <FieldGroup>
-                    <Controller
-                      control={form.control}
-                      name="title"
-                      render={({ field, fieldState }) => (
-                        <Field
-                          className="grid grid-cols-4 items-center gap-4"
-                          data-invalid={fieldState.invalid}
-                        >
-                          <FieldLabel className="text-right">Title</FieldLabel>
-                          <div className="col-span-3">
-                            <Input
-                              id="title"
-                              placeholder="Movie Title"
-                              {...field}
-                            />
-                            {fieldState.invalid && (
-                              <FieldError errors={[fieldState.error]} />
-                            )}
-                          </div>
-                        </Field>
-                      )}
-                    />
-                    <Controller
-                      control={form.control}
-                      name="rating"
-                      render={({ field, fieldState }) => (
-                        <Field
-                          className="grid grid-cols-4 items-center gap-4"
-                          data-invalid={fieldState.invalid}
-                        >
-                          <FieldLabel className="text-right">Rating</FieldLabel>
-                          <div className="col-span-3">
-                            <Input
-                              id="rating"
-                              type="number"
-                              min="0"
-                              max="10"
-                              placeholder="0-10"
-                              {...field}
-                            />
-                            {fieldState.invalid && (
-                              <FieldError errors={[fieldState.error]} />
-                            )}
-                          </div>
-                        </Field>
-                      )}
-                    />
-                  </FieldGroup>
-                </div>
-                <DialogFooter>
-                  <Button type="submit">Save</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <ReviewDialog
+            open={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+            onSubmit={onSubmit}
+            initialData={selectedReview}
+            title={selectedReview ? "Edit Review" : "Add Manual Review"}
+            description={
+              selectedReview
+                ? "Update your review details."
+                : "Add a review for a movie not in your lists."
+            }
+          />
 
           <AlertDialog
             open={isDeleteDialogOpen}
