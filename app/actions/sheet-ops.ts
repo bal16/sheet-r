@@ -4,6 +4,10 @@ import { getSheetDoc, checkSheetAccess } from "@/lib/google";
 import { auth } from "@/lib/auth"; // Konfigurasi Better-Auth Anda
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import type {
+  GoogleSpreadsheet,
+  GoogleSpreadsheetWorksheet,
+} from "google-spreadsheet";
 
 // Add minimal sheet typings to avoid `any`
 type SheetRow = {
@@ -11,18 +15,6 @@ type SheetRow = {
   assign: (data: Record<string, string>) => void;
   save: () => Promise<void>;
   delete: () => Promise<void>;
-};
-
-type Sheet = {
-  title: string;
-  getRows: () => Promise<SheetRow[]>;
-  addRow: (data: Record<string, string | number | boolean>) => Promise<void>;
-};
-
-type SheetDoc = {
-  sheetsByTitle: Record<string, Sheet | undefined>;
-  sheetsByIndex: Sheet[];
-  loadInfo?: () => Promise<void>;
 };
 
 // --- 0. SECURITY HELPER ---
@@ -39,7 +31,10 @@ async function ensureAuthorized() {
 }
 
 // Helper: resolve a sheet by title (case-insensitive), ensure metadata loaded
-async function getSheetByTitleCI(doc: SheetDoc, title: string): Promise<Sheet> {
+async function getSheetByTitleCI(
+  doc: GoogleSpreadsheet,
+  title: string
+): Promise<GoogleSpreadsheetWorksheet> {
   // load sheet metadata if needed
   if (!doc.sheetsByIndex || doc.sheetsByIndex.length === 0) {
     await doc.loadInfo?.();
@@ -50,13 +45,14 @@ async function getSheetByTitleCI(doc: SheetDoc, title: string): Promise<Sheet> {
 
   const match =
     (doc.sheetsByIndex || []).find(
-      (s: Sheet) => s?.title?.toLowerCase() === title.toLowerCase()
+      (s: GoogleSpreadsheetWorksheet) =>
+        s?.title?.toLowerCase() === title.toLowerCase()
     ) || null;
 
   if (!match) {
     throw new Error(
       `Sheet "${title}" not found. Available: ${(doc.sheetsByIndex || [])
-        .map((s: Sheet) => s.title)
+        .map((s: GoogleSpreadsheetWorksheet) => s.title)
         .join(", ")}`
     );
   }
@@ -68,72 +64,105 @@ async function getSheetByTitleCI(doc: SheetDoc, title: string): Promise<Sheet> {
 // ==========================================
 
 export async function getReviews() {
-  // Read bisa public (tergantung kebutuhan), tapi di sini kita buat public read
   const doc = await getSheetDoc();
-  const sheet = doc.sheetsByTitle.Reviews;
+  const sheet = await getSheetByTitleCI(doc, "Reviews");
   const rows = await sheet.getRows();
 
-  return rows.map((row) => ({
+  return rows.map((row: SheetRow) => ({
     id: row.get("id"),
     title: row.get("title"),
     rating: Number(row.get("rating")),
-    review_content: row.get("review_content"),
-    poster_url: row.get("poster_url"),
-    watched_date: row.get("watched_date"),
+    date: row.get("date"),
   }));
 }
 
+// Fix review sync: match Speweek by `title_year` (strip year)
 export async function addReview(data: {
-  id: string; // ID harus dibawa dari Downlist/Speweek jika ada
+  id?: string;
   title: string;
   rating: number;
-  review_content: string;
-  poster_url: string;
-  watched_date: string;
+  date: string;
 }) {
   await ensureAuthorized();
   const doc = await getSheetDoc();
 
-  // A. Tambah ke Sheet Review
-  const reviewSheet = doc.sheetsByTitle.Reviews;
+  const reviewSheet = await getSheetByTitleCI(doc, "Reviews");
   await reviewSheet.addRow({
-    id: data.id || crypto.randomUUID(), // Generate baru jika input manual
+    id: data.id || crypto.randomUUID(),
     title: data.title,
-    rating: data.rating,
-    review_content: data.review_content,
-    poster_url: data.poster_url,
-    watched_date: data.watched_date,
+    rating: String(data.rating),
+    date: data.date,
   });
 
-  // B. AUTO-SYNC: Update status di Downlist & Speweek
-  // Cari di Downlist
-  const downlistSheet = doc.sheetsByTitle.Downlist;
+  const downlistSheet = await getSheetByTitleCI(doc, "Downlist");
   const downRows = await downlistSheet.getRows();
-  const downItem = downRows.find((row) => row.get("id") === data.id);
+  const speweekSheet = await getSheetByTitleCI(doc, "Speweek");
+  const speRows = await speweekSheet.getRows();
+
+  let downItem: SheetRow | undefined;
+  let speItem: SheetRow | undefined;
+  if (data.id) {
+    downItem = downRows.find(
+      (row) => (row.get("id") as string) === data.id
+    );
+
+    speItem = speRows.find(
+      (row) =>
+        (row.get("id") as string) === data.id
+    );
+  } else {
+    downItem = downRows.find(
+      (row) =>
+        (row.get("title") as string).toLowerCase() === data.title.toLowerCase()
+    );
+
+    speItem = speRows.find(
+      (row) =>
+        (row.get("title") as string).toLowerCase() === data.title.toLowerCase()
+    );
+  }
 
   if (downItem) {
     downItem.assign({ is_watched: "TRUE" });
     await downItem.save();
   }
 
-  // Cari di Speweek
-  const speweekSheet = doc.sheetsByTitle.Speweek;
-  const speRows = await speweekSheet.getRows();
-  const speItem = speRows.find((row) => row.get("id") === data.id);
-
   if (speItem) {
     speItem.assign({ is_watched: "TRUE" });
     await speItem.save();
   }
 
+  revalidatePath("/dashboard/reviews");
   revalidatePath("/dashboard");
   return { success: true };
+}
+
+export async function updateReview(data: {
+  id: string;
+  title: string;
+  rating: number;
+}) {
+  await ensureAuthorized();
+  const doc = await getSheetDoc();
+  const sheet = await getSheetByTitleCI(doc, "Reviews");
+  const rows = await sheet.getRows();
+
+  const row = rows.find((r) => r.get("id") === data.id);
+  if (row) {
+    row.assign({
+      title: data.title,
+      rating: String(data.rating),
+    });
+    await row.save();
+  }
+
+  revalidatePath("/dashboard/reviews");
 }
 
 export async function deleteReview(id: string) {
   await ensureAuthorized();
   const doc = await getSheetDoc();
-  const sheet = doc.sheetsByTitle.Reviews;
+  const sheet = await getSheetByTitleCI(doc, "Reviews");
   const rows = await sheet.getRows();
 
   const rowToDelete = rows.find((r) => r.get("id") === id);
@@ -147,25 +176,22 @@ export async function deleteReview(id: string) {
 // ==========================================
 
 export async function getDownlist() {
-  const doc = (await getSheetDoc()) as unknown as SheetDoc;
+  const doc = await getSheetDoc();
   const sheet = await getSheetByTitleCI(doc, "Downlist");
   const rows = await sheet.getRows();
 
-  const result =  rows.map((row: SheetRow) => ({
+  return rows.map((row: SheetRow) => ({
     id: row.get("id"),
     title: row.get("title"),
     year: Number(row.get("release_year")), // ensure number
     is_downloaded: row.get("is_downloaded") === "TRUE",
     is_watched: row.get("is_watched") === "TRUE",
   }));
-
-  console.log("Fetched Downlist:", result);
-  return result;
 }
 
 export async function addToDownlist(title: string, year: string) {
   await ensureAuthorized();
-  const doc = (await getSheetDoc()) as unknown as SheetDoc;
+  const doc = await getSheetDoc();
   const sheet = await getSheetByTitleCI(doc, "Downlist");
 
   await sheet.addRow({
@@ -181,7 +207,7 @@ export async function addToDownlist(title: string, year: string) {
 
 export async function toggleDownloadStatus(id: string, currentStatus: boolean) {
   await ensureAuthorized();
-  const doc = (await getSheetDoc()) as unknown as SheetDoc;
+  const doc = await getSheetDoc();
   const sheet = await getSheetByTitleCI(doc, "Downlist");
   const rows = await sheet.getRows();
 
@@ -196,7 +222,7 @@ export async function toggleDownloadStatus(id: string, currentStatus: boolean) {
 
 export async function deleteDownlistItem(id: string) {
   await ensureAuthorized();
-  const doc = (await getSheetDoc()) as unknown as SheetDoc;
+  const doc = await getSheetDoc();
   const sheet = await getSheetByTitleCI(doc, "Downlist");
   const rows = await sheet.getRows();
 
@@ -213,7 +239,7 @@ export async function updateDownlistItem(data: {
   year: number | string;
 }) {
   await ensureAuthorized();
-  const doc = (await getSheetDoc()) as unknown as SheetDoc;
+  const doc = await getSheetDoc();
   const sheet = await getSheetByTitleCI(doc, "Downlist");
   const rows = await sheet.getRows();
 
@@ -232,7 +258,7 @@ export async function updateDownlistItem(data: {
 // Explicit setter for is_downloaded to avoid client/server mismatch
 export async function setDownloadStatus(id: string, is_downloaded: boolean) {
   await ensureAuthorized();
-  const doc = (await getSheetDoc()) as unknown as SheetDoc;
+  const doc = await getSheetDoc();
   const sheet = await getSheetByTitleCI(doc, "Downlist");
   const rows = await sheet.getRows();
 
@@ -249,33 +275,98 @@ export async function setDownloadStatus(id: string, is_downloaded: boolean) {
 // 3. SPEWEEK CRUD (Events)
 // ==========================================
 
-export async function getSpeweek() {
+// Helper to make a stable event id from theme + month-year
+function makeEventId(theme: string, added_month_year: string): string {
+  return `${theme
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")}:${added_month_year.trim()}`;
+}
+
+type SpeweekEvent = {
+  id: string;
+  theme: string;
+  added_month_year: string;
+  movies: { id: string; title_year: string; is_watched: boolean }[];
+};
+
+export async function getSpeweek(): Promise<SpeweekEvent[]> {
   const doc = await getSheetDoc();
-  const sheet = doc.sheetsByTitle.Speweek;
+  const sheet = await getSheetByTitleCI(doc, "Speweek");
   const rows = await sheet.getRows();
 
-  return rows.map((row) => ({
-    id: row.get("id"),
-    title_year: row.get("title_year"),
-    added_month_year: row.get("added_month_year"),
-    theme: row.get("theme"),
-    is_watched: row.get("is_watched") === "TRUE",
-  }));
+  const groups = new Map<string, SpeweekEvent>();
+
+  for (const row of rows) {
+    const theme = row.get("theme");
+    const added_month_year = `${row.get("added_month")}-${row.get(
+      "added_year"
+    )}`;
+    const title_year = row.get("title")
+      ? `${row.get("title")} (${row.get("release_year")})`
+      : "";
+    const is_watched = row.get("is_watched") === "TRUE";
+    const eventId = makeEventId(theme, added_month_year);
+
+    if (!groups.has(eventId)) {
+      groups.set(eventId, {
+        id: eventId,
+        theme,
+        added_month_year,
+        movies: [],
+      });
+    }
+
+    // Treat empty title_year as an event placeholder row
+    if (title_year.trim().length > 0) {
+      groups.get(eventId)!.movies.push({
+        id: row.get("id"),
+        title_year,
+        is_watched,
+      });
+    }
+  }
+
+  return Array.from(groups.values());
+}
+
+export async function addSpeweekEvent(data: {
+  theme: string;
+  added_month_year: string;
+}) {
+  await ensureAuthorized();
+  const doc = await getSheetDoc();
+  const sheet = await getSheetByTitleCI(doc, "Speweek");
+
+  // Create a placeholder row to represent the event (no movie yet)
+  await sheet.addRow({
+    id: crypto.randomUUID(),
+    title_year: "",
+    added_month: data.added_month_year.split("-")[0],
+    added_year: data.added_month_year.split("-")[1],
+    theme: data.theme,
+    is_watched: "FALSE",
+  });
+
+  revalidatePath("/dashboard/speweek");
 }
 
 export async function addToSpeweek(data: {
-  title_year: string;
+  title: string;
+  release_year: string;
   added_month_year: string;
   theme: string;
 }) {
   await ensureAuthorized();
   const doc = await getSheetDoc();
-  const sheet = doc.sheetsByTitle.Speweek;
+  const sheet = await getSheetByTitleCI(doc, "Speweek");
 
   await sheet.addRow({
     id: crypto.randomUUID(),
-    title_year: data.title_year,
-    added_month_year: data.added_month_year,
+    title: data.title,
+    release_year: data.release_year,
+    added_month: data.added_month_year.split("-")[0],
+    added_year: data.added_month_year.split("-")[1],
     theme: data.theme,
     is_watched: "FALSE",
   });
@@ -286,7 +377,7 @@ export async function addToSpeweek(data: {
 export async function deleteSpeweekItem(id: string) {
   await ensureAuthorized();
   const doc = await getSheetDoc();
-  const sheet = doc.sheetsByTitle.Speweek;
+  const sheet = await getSheetByTitleCI(doc, "Speweek");
   const rows = await sheet.getRows();
 
   const row = rows.find((r) => r.get("id") === id);
