@@ -1,5 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { DownlistFormValues } from "../schemas/downlistFormSchema";
+import {
+  getDownlist,
+  addToDownlist,
+  updateDownlistItem,
+  setDownloadStatus,
+} from "@/app/actions/sheet-ops";
 
 export type DownlistItem = {
   id: string;
@@ -9,123 +15,34 @@ export type DownlistItem = {
   is_watched: boolean;
 };
 
-// Demo data
-const initialData: DownlistItem[] = [
-  {
-    id: "1",
-    title: "Dune: Part Two",
-    year: 2024,
-    is_downloaded: true,
-    is_watched: false,
-  },
-  {
-    id: "2",
-    title: "Poor Things",
-    year: 2023,
-    is_downloaded: false,
-    is_watched: false,
-  },
-  {
-    id: "3",
-    title: "The Boy and the Heron",
-    year: 2023,
-    is_downloaded: false,
-    is_watched: false,
-  },
-  {
-    id: "4",
-    title: "Oppenheimer",
-    year: 2023,
-    is_downloaded: true,
-    is_watched: true,
-  },
-  {
-    id: "5",
-    title: "Past Lives",
-    year: 2023,
-    is_downloaded: false,
-    is_watched: true,
-  },
-  {
-    id: "6",
-    title: "Anatomy of a Fall",
-    year: 2023,
-    is_downloaded: true,
-    is_watched: false,
-  },
-  {
-    id: "7",
-    title: "Killers of the Flower Moon",
-    year: 2023,
-    is_downloaded: true,
-    is_watched: false,
-  },
-  {
-    id: "8",
-    title: "Barbie",
-    year: 2023,
-    is_downloaded: false,
-    is_watched: false,
-  },
-  {
-    id: "9",
-    title: "Godzilla Minus One",
-    year: 2023,
-    is_downloaded: false,
-    is_watched: false,
-  },
-];
-
-// Mock Database and API
-let mockData = [...initialData];
-
-const fetchDownlist = async (): Promise<DownlistItem[]> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return [...mockData];
-};
-
 export function useDownlist() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ["downlist"],
-    queryFn: fetchDownlist,
-    initialData,
+    queryFn: async () => await getDownlist(),
   });
 
-  const mutationOptions = {
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["downlist"] });
-    },
-  };
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["downlist"] });
 
   const addMutation = useMutation({
     mutationFn: async (values: DownlistFormValues) => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const newItem = {
-        id: Math.random().toString(36).substr(2, 9),
-        ...values,
-        is_downloaded: false,
-        is_watched: false,
-      };
-      mockData = [newItem, ...mockData];
+      await addToDownlist(values.title, String(values.year));
     },
-    ...mutationOptions,
+    onSuccess: invalidate,
   });
 
   const editMutation = useMutation({
     mutationFn: async ({
       id,
       ...values
-    }: DownlistFormValues & { id: string }) => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      mockData = mockData.map((item) =>
-        item.id === id ? { ...item, ...values } : item
-      );
-    },
-    ...mutationOptions,
+    }: DownlistFormValues & { id: string }) =>
+      updateDownlistItem({ id, title: values.title, year: values.year }),
+    onSuccess: invalidate,
   });
 
+  // Set downloaded status based on desired value
   const toggleMutation = useMutation({
     mutationFn: async ({
       id,
@@ -134,16 +51,13 @@ export function useDownlist() {
       id: string;
       is_downloaded: boolean;
     }) => {
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      mockData = mockData.map((item) =>
-        item.id === id ? { ...item, is_downloaded } : item
-      );
+      await setDownloadStatus(id, is_downloaded);
     },
-    ...mutationOptions,
+    onSuccess: invalidate,
   });
 
   return {
-    data: query.data,
+    data: query.data ?? [],
     isLoading: query.isLoading,
     addDownlist: addMutation.mutateAsync,
     editDownlist: editMutation.mutateAsync,

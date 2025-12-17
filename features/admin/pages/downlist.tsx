@@ -109,6 +109,7 @@ export default function DownlistPage() {
   }, [activeTab, rows]);
 
   const toggleDownloaded = (id: string, value: boolean) => {
+    // send desired value to server
     toggleMutation({ id, is_downloaded: value });
   };
 
@@ -143,7 +144,7 @@ export default function DownlistPage() {
           </Button>
         );
       },
-      cell: ({ row }) => <div>{row.getValue("year") as number}</div>,
+      cell: ({ row }) => <div>{row.getValue("year")}</div>,
       enableSorting: true,
     },
     {
