@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, LogIn, LogOut } from "lucide-react";
-import { authClient } from "@/libs/auth-client";
+import { authClient } from "@/lib/auth-client";
 import { Button } from "./ui/button";
 
 export const SignInButton = () => {
