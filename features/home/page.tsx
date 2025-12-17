@@ -48,19 +48,16 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Button
-              size="lg"
-              variant="secondary"
-              className="h-12 px-8 font-semibold"
-            >
-              View Reviews
+            <Button size="lg" asChild className="h-12 px-8 font-semibold">
+              <Link href="/dashboard">View Reviews</Link>
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               size="lg"
-              className="h-12 px-8 bg-foreground "
+              className="h-12 px-8 "
+              asChild
             >
-              How It Works
+              <Link href="#">How It Works</Link>
             </Button>
           </div>
 
