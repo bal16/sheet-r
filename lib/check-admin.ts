@@ -1,4 +1,4 @@
-import { auth } from "@/libs/auth";
+import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
 export async function checkIsAdmin() {
