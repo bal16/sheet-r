@@ -39,4 +39,4 @@ export const STEPS = [
 ];
 
 export const TECH = ["Next.js", "Google Sheets API", "Better-Auth", "Tailwind"];
-export const GITHUB_URL = "https://github.com";
+export const GITHUB_URL = "https://github.com/bal16/sheet-r.git";
