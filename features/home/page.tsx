@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 import { SignInButton } from "./components/SignInButton";
-import { FEATURES, GITHUB_URL, TECH } from "./const";
+import { FEATURES, GITHUB_URL, STEPS, TECH } from "./const";
 
 export default function HomePage() {
   return (
@@ -37,14 +37,14 @@ export default function HomePage() {
         {/* Hero Section */}
         <div className="max-w-3xl space-y-6">
           <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-100">
-            Your Personal Film Database. <br className="hidden md:block" />
+            Personal Film Tracker. <br className="hidden md:block" />
             <span className="bg-linear-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
-              Zero Bloat.
+              Powered by Sheets.
             </span>
           </h1>
           <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
-            Manage your movie reviews seamlessly using only Google Sheets.
-            Secured by Better-Auth, rendered statically for instant speed.
+            A static site generator for movie lovers. Use Google Sheets as your
+            database, configure your ID, and deploy.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
@@ -57,7 +57,7 @@ export default function HomePage() {
               className="h-12 px-8 "
               asChild
             >
-              <Link href="#">How It Works</Link>
+              <Link href="#how-it-works">How It Works</Link>
             </Button>
           </div>
 
@@ -96,6 +96,38 @@ export default function HomePage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        {/* How It Works Section */}
+        <div id="how-it-works" className="w-full max-w-6xl mt-32 mb-12">
+          <div className="text-center mb-16 space-y-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-100">
+              How It Works
+            </h2>
+            <p className="text-slate-400 max-w-2xl mx-auto">
+              Simple setup. No complex database migrations needed.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            {/* Connecting Line (Desktop) */}
+            <div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-linear-to-r from-indigo-500/0 via-indigo-500/20 to-indigo-500/0" />
+
+            {STEPS.map((step, i) => (
+              <div
+                key={i}
+                className="relative flex flex-col items-center text-center space-y-4"
+              >
+                <div className="h-24 w-24 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center z-10 shadow-xl shadow-indigo-500/5">
+                  <step.icon className="h-10 w-10 text-indigo-400" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-100">
+                  {step.title}
+                </h3>
+                <p className="text-slate-400 leading-relaxed">{step.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </main>
 
