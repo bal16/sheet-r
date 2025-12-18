@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import {
   ArrowUpDown,
   MoreHorizontal,
@@ -29,9 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
-import { AppSidebar } from "@/features/admin/components/app-sidebar";
 import { DataTable } from "@/features/admin/components/data-table";
 import { SiteHeader } from "@/features/admin/components/site-header";
 import { ReviewDialog } from "@/features/admin/components/review-dialog";
@@ -68,11 +66,12 @@ export default function ReviewsPage() {
   };
 
   const confirmDelete = async () => {
-    if (reviewToDelete) {
-      await deleteReview(reviewToDelete);
-      setIsDeleteDialogOpen(false);
-      setReviewToDelete(null);
+    if (!reviewToDelete) {
+      return;
     }
+    await deleteReview(reviewToDelete);
+    setIsDeleteDialogOpen(false);
+    setReviewToDelete(null);
   };
 
   const onSubmit = async (values: ReviewFormValues) => {
@@ -169,72 +168,60 @@ export default function ReviewsPage() {
   ];
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as CSSProperties
-      }
-    >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader name="Reviews" />
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="flex items-center justify-between py-4">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Review Archive
-            </h1>
-            <Button onClick={handleAdd}>
-              <Plus className="mr-2 h-4 w-4" /> Add Manual Review
-            </Button>
-          </div>
-
-          <DataTable
-            columns={columns}
-            data={reviews}
-            filterKey="title"
-            isLoading={isLoading}
-          />
-
-          <ReviewDialog
-            open={isDialogOpen}
-            onOpenChange={setIsDialogOpen}
-            onSubmit={onSubmit}
-            initialData={selectedReview}
-            title={selectedReview ? "Edit Review" : "Add Manual Review"}
-            description={
-              selectedReview
-                ? "Update your review details."
-                : "Add a review for a movie not in your lists."
-            }
-          />
-
-          <AlertDialog
-            open={isDeleteDialogOpen}
-            onOpenChange={setIsDeleteDialogOpen}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the
-                  review from your archive.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={confirmDelete}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+    <>
+      <SiteHeader name="Reviews" />
+      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <div className="flex items-center justify-between py-4">
+          <h1 className="text-2xl font-bold tracking-tight">Review Archive</h1>
+          <Button onClick={handleAdd}>
+            <Plus className="mr-2 h-4 w-4" /> Add Manual Review
+          </Button>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+
+        <DataTable
+          columns={columns}
+          data={reviews}
+          filterKey="title"
+          isLoading={isLoading}
+        />
+
+        <ReviewDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onSubmit={onSubmit}
+          initialData={selectedReview}
+          title={selectedReview ? "Edit Review" : "Add Manual Review"}
+          description={
+            selectedReview
+              ? "Update your review details."
+              : "Add a review for a movie not in your lists."
+          }
+        />
+
+        <AlertDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the
+                review from your archive.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </>
   );
 }
