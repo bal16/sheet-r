@@ -5,7 +5,7 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export const SignInButton = () => {
+const SignInButtonContent = () => {
   const { data: session, isPending } = authClient.useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -120,5 +120,23 @@ export const SignInButton = () => {
       <LogIn className="mr-2 h-4 w-4" />
       Sign In
     </Button>
+  );
+};
+
+export const SignInButton = () => {
+  return (
+    <Suspense
+      fallback={
+        <Button
+          disabled
+          className="bg-indigo-600/50 text-white border border-indigo-500/20"
+        >
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Loading...
+        </Button>
+      }
+    >
+      <SignInButtonContent />
+    </Suspense>
   );
 };
