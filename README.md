@@ -26,6 +26,13 @@ Data source: Google Sheets. Admin UI: queue, reviews, events, charts.
 - Admin features under `features/admin/` (e.g. `features/admin/components/chart-area-interactive.tsx`)
 - Pages use hooks/server actions to fetch/mutate sheet data, then render tables, forms, and charts
 
+### Sample Google Sheet
+
+Use this read-only sample as a reference or to get started:
+https://docs.google.com/spreadsheets/d/18qlwSQXJIoqhTCEfBpgkIMSwKpbWaC0AOetJMsyFLns/edit?usp=sharing
+
+Tip: Make a copy (File → Make a copy) and use the copied sheet’s ID in your local .env.
+
 ## How to Install
 
 1. Prerequisites: Node 18+, pnpm
