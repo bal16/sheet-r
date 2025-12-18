@@ -16,7 +16,7 @@ export default async function AdminLayout({
   });
 
   if (!session) {
-    redirect("/");
+    redirect("/?error=unauthorized");
   }
 
   return (
