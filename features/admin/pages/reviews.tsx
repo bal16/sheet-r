@@ -36,6 +36,7 @@ import { ReviewDialog } from "@/features/admin/components/review-dialog";
 
 import { useReviews, type Review } from "@/features/admin/hooks/use-reviews";
 import { type ReviewFormValues } from "@/features/admin/schemas/reviewFormSchema";
+import { toast } from "sonner";
 
 export default function ReviewsPage() {
   const {
@@ -69,16 +70,29 @@ export default function ReviewsPage() {
     if (!reviewToDelete) {
       return;
     }
-    await deleteReview(reviewToDelete);
-    setIsDeleteDialogOpen(false);
-    setReviewToDelete(null);
+    try {
+      await deleteReview(reviewToDelete);
+      toast.success("Review deleted successfully");
+    } catch {
+      toast.error("Failed to delete review");
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setReviewToDelete(null);
+    }
   };
 
   const onSubmit = async (values: ReviewFormValues) => {
-    if (selectedReview) {
-      await editReview({ id: selectedReview.id, ...values });
-    } else {
-      await addReview(values);
+    try {
+      if (selectedReview) {
+        await editReview({ id: selectedReview.id, ...values });
+        toast.success("Review updated successfully");
+      } else {
+        await addReview(values);
+        toast.success("Review added successfully");
+      }
+      setIsDialogOpen(false);
+    } catch {
+      toast.error("Failed to save review");
     }
   };
 

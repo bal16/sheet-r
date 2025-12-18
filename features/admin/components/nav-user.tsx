@@ -2,7 +2,7 @@
 
 import { IconDotsVertical, IconLogout } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -19,8 +19,19 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { authClient } from "@/lib/auth-client";
 import { getInitials } from "../utils";
+import { toast } from "sonner";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
@@ -42,6 +53,29 @@ export function NavUser() {
       router.replace("/");
     }
   }, [isPending, user, router]);
+
+  const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
+
+  const handleSignOutClick = () => {
+    setIsSignOutDialogOpen(true);
+  };
+
+  const confirmSignOut = async () => {
+    try {
+      authClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            toast.success("Signed out successfully");
+            router.refresh();
+          },
+        },
+      });
+    } catch {
+      toast.error("Failed to signOut");
+    } finally {
+      setIsSignOutDialogOpen(false);
+    }
+  };
 
   if (isPending || !user) {
     return "loading...";
@@ -98,11 +132,33 @@ export function NavUser() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOutClick}>
               <IconLogout />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
+          <AlertDialog
+            open={isSignOutDialogOpen}
+            onOpenChange={setIsSignOutDialogOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You will signOut and remove your current session.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmSignOut}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  SignOut
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>

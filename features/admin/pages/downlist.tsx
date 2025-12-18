@@ -64,6 +64,7 @@ import { ReviewDialog } from "@/features/admin/components/review-dialog";
 import { useReviews } from "@/features/admin/hooks/use-reviews";
 import { type ReviewFormValues } from "@/features/admin/schemas/reviewFormSchema";
 import { useQueue } from "@/features/admin/hooks/use-queue";
+import { toast } from "sonner";
 
 export default function DownlistPage() {
   const {
@@ -116,18 +117,30 @@ export default function DownlistPage() {
     if (!reviewToDelete) {
       return;
     }
-    await deleteDownlist(reviewToDelete);
-    setIsDeleteDialogOpen(false);
-    setReviewToDelete(null);
+    try {
+      await deleteDownlist(reviewToDelete);
+      toast.success("Item deleted successfully");
+    } catch {
+      toast.error("Failed to delete item");
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setReviewToDelete(null);
+    }
   };
 
   const onSubmit = async (values: DownlistFormValues) => {
-    if (editingId) {
-      await editDownlist({ id: editingId, ...values });
-    } else {
-      await addDownlist(values);
+    try {
+      if (editingId) {
+        await editDownlist({ id: editingId, ...values });
+        toast.success("Item updated successfully");
+      } else {
+        await addDownlist(values);
+        toast.success("Item added successfully");
+      }
+      setIsDialogOpen(false);
+    } catch {
+      toast.error("Failed to save item");
     }
-    setIsDialogOpen(false);
   };
 
   const filteredData = useMemo(() => {
@@ -147,7 +160,13 @@ export default function DownlistPage() {
 
   const toggleDownloaded = (id: string, value: boolean) => {
     // send desired value to server
-    toggleMutation({ id, is_downloaded: value });
+    toggleMutation(
+      { id, is_downloaded: value },
+      {
+        onSuccess: () => toast.success("Status updated"),
+        onError: () => toast.error("Failed to update status"),
+      }
+    );
   };
 
   const handleReview = (item: DownlistItem) => {
@@ -156,7 +175,13 @@ export default function DownlistPage() {
   };
 
   const onReviewSubmit = async (values: ReviewFormValues) => {
-    await addReview(values);
+    try {
+      await addReview(values);
+      toast.success("Review submitted successfully");
+      setIsReviewDialogOpen(false);
+    } catch {
+      toast.error("Failed to submit review");
+    }
   };
 
   const columns: ColumnDef<DownlistItem>[] = [
@@ -258,11 +283,18 @@ export default function DownlistPage() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() =>
-                  addToQueue({
-                    id: row.original.id,
-                    title: row.original.title,
-                    origin: "downlist",
-                  })
+                  toast.promise(
+                    addToQueue({
+                      id: row.original.id,
+                      title: row.original.title,
+                      origin: "downlist",
+                    }),
+                    {
+                      loading: "Adding to queue...",
+                      success: "Added to queue",
+                      error: "Failed to add to queue",
+                    }
+                  )
                 }
               >
                 <ListPlus className="mr-2 h-4 w-4" /> Add to Queue

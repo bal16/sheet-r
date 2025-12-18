@@ -9,6 +9,7 @@ import {
   addToSpeweek,
   deleteSpeweekItem,
 } from "@/app/actions/speweek-act";
+import { toast } from "sonner";
 
 export type Movie = {
   id: string;
@@ -40,7 +41,13 @@ export function useSpeweek() {
         theme: values.theme,
         added_month_year: values.added_month_year,
       }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success("Event added successfully");
+    },
+    onError: () => {
+      toast.error("Failed to add event");
+    },
   });
 
   const addMovie = useMutation({
@@ -63,13 +70,25 @@ export function useSpeweek() {
         added_month_year: target.added_month_year,
       });
     },
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success("Movie added successfully");
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add movie"
+      );
+    },
   });
 
   const removeMovie = useMutation({
     mutationFn: async ({ movieId }: { eventId: string; movieId: string }) =>
       deleteSpeweekItem(movieId),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate();
+      toast.success("Movie removed successfully");
+    },
+    onError: () => toast.error("Failed to remove movie"),
   });
 
   return {

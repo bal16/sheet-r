@@ -12,6 +12,7 @@ import { IconPlayerPlay, IconTrash } from "@tabler/icons-react";
 import { ReviewDialog } from "@/features/admin/components/review-dialog";
 import { addReview } from "@/app/actions/reviews-act";
 import { type ReviewFormValues } from "@/features/admin/schemas/reviewFormSchema";
+import { toast } from "sonner";
 
 export type QueueItem = {
   id: string;
@@ -38,6 +39,8 @@ export function QueueList({ initialItems }: QueueListProps) {
   const onDragEnd = async (result: DropResult) => {
     if (!result.destination) return;
 
+    const previousItems = items;
+
     // 1. Reorder Array di Client (Optimistic UI)
     const newItems = Array.from(items);
     const [reorderedItem] = newItems.splice(result.source.index, 1);
@@ -46,7 +49,12 @@ export function QueueList({ initialItems }: QueueListProps) {
     setItems(newItems);
 
     // 2. Simpan ke Google Sheet (kirim array baru yang sudah terurut)
-    await reorderQueue(newItems);
+    try {
+      await reorderQueue(newItems);
+    } catch {
+      setItems(previousItems);
+      toast.error("Failed to reorder queue");
+    }
   };
 
   const handleReviewClick = (item: QueueItem) => {
@@ -57,25 +65,37 @@ export function QueueList({ initialItems }: QueueListProps) {
   const handleReviewSubmit = async (values: ReviewFormValues) => {
     if (!reviewItem) return;
 
-    // 1. Submit Review (Simpan ke Archive & Update Status)
-    await addReview({
-      id: reviewItem.id,
-      title: values.title,
-      rating: values.rating,
-      date: new Date().toISOString().split("T")[0],
-    });
+    try {
+      // 1. Submit Review (Simpan ke Archive & Update Status)
+      await addReview({
+        id: reviewItem.id,
+        title: values.title,
+        rating: values.rating,
+        date: new Date().toISOString().split("T")[0],
+      });
 
-    // 2. Remove from Queue (Hapus dari antrian)
-    await removeFromQueue(reviewItem.id);
-    setItems((prev) => prev.filter((i) => i.id !== reviewItem.id));
+      // 2. Remove from Queue (Hapus dari antrian)
+      await removeFromQueue(reviewItem.id);
+      setItems((prev) => prev.filter((i) => i.id !== reviewItem.id));
 
-    setIsReviewOpen(false);
-    setReviewItem(null);
+      setIsReviewOpen(false);
+      setReviewItem(null);
+      toast.success("Review submitted successfully");
+    } catch {
+      toast.error("Failed to submit review");
+    }
   };
 
   const handleDelete = async (id: string) => {
+    const previousItems = items;
     setItems((prev) => prev.filter((i) => i.id !== id));
-    await removeFromQueue(id);
+    try {
+      await removeFromQueue(id);
+      toast.success("Item removed from queue");
+    } catch {
+      setItems(previousItems);
+      toast.error("Failed to remove item");
+    }
   };
 
   return (
