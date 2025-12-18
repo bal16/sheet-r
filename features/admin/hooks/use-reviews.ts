@@ -5,7 +5,7 @@ import {
   addReview as addReviewAction,
   updateReview as updateReviewAction,
   deleteReview as deleteReviewAction,
-} from "@/app/actions/sheet-ops";
+} from "@/app/actions/reviews-act";
 
 export type Review = {
   id: string;

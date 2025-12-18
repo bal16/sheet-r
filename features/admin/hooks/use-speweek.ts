@@ -8,7 +8,7 @@ import {
   addSpeweekEvent,
   addToSpeweek,
   deleteSpeweekItem,
-} from "@/app/actions/sheet-ops";
+} from "@/app/actions/speweek-act";
 
 export type Movie = {
   id: string;

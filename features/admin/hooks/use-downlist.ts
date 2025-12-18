@@ -6,7 +6,7 @@ import {
   updateDownlistItem,
   setDownloadStatus,
   deleteDownlistItem,
-} from "@/app/actions/sheet-ops";
+} from "@/app/actions/downlist-act";
 
 export type DownlistItem = {
   id: string;
@@ -57,10 +57,10 @@ export function useDownlist() {
     onSuccess: invalidate,
   });
 
-   const deleteMutation = useMutation({
-      mutationFn: async (id: string) => deleteDownlistItem(id),
-      onSuccess: invalidate,
-    });
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => deleteDownlistItem(id),
+    onSuccess: invalidate,
+  });
 
   return {
     data: query.data ?? [],
