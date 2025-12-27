@@ -23,11 +23,22 @@ const SignInButtonContent = () => {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (searchParams.get("error") === "unauthorized") {
-      toast.error("You need to be signed in to access that page");
-      router.replace("/");
+    const error = searchParams.get("error");
+
+    if (!error) {
+      return;
     }
-  }, [searchParams, router]);
+
+    if (error === "unauthorized")
+      toast.error("You need to be signed in to access that page");
+
+    if (error === "forbidden")
+      toast.error("You do not have permission to access that page");
+
+    authClient.signOut();
+
+    router.replace("/");
+  }, [searchParams, router, session]);
 
   const [isSignOutDialogOpen, setIsSignOutDialogOpen] = useState(false);
 
@@ -41,7 +52,7 @@ const SignInButtonContent = () => {
         fetchOptions: {
           onSuccess: () => {
             toast.success("Signed out successfully");
-            router.refresh();
+            // router.refresh();
           },
         },
       });

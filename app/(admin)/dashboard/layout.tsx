@@ -1,22 +1,32 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { type CSSProperties } from "react";
 
 import { AppSidebar } from "@/features/admin/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { auth } from "@/lib/auth";
+import { ensureAuthorized } from "@/app/actions/helper";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  let session: unknown;
+  let errorCode: number | undefined;
+  const knownErrors: Record<number, string> = {
+    401: "unauthorized",
+    403: "forbidden",
+  };
+  try {
+    session = await ensureAuthorized();
+  } catch (error) {
+    if (error instanceof Error) {
+      errorCode = error.cause as number;
+      session = null;
+    }
+  }
 
-  if (!session) {
-    redirect("/?error=unauthorized");
+  if (!session && errorCode) {
+    redirect(`/?error=${knownErrors[errorCode] || "unauthorized"}`);
   }
 
   return (
