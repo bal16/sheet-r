@@ -4,7 +4,18 @@ import { getSheetDoc } from "@/lib/google";
 import { ensureAuthorized, getSheetByTitleCI, type SheetRow } from "./helper";
 import { revalidatePath } from "next/cache";
 
-export async function getReviews() {
+type Review = {
+  id: string;
+  title: string;
+  rating: number;
+  date: string;
+};
+
+/**
+ * Get all reviews from the Google Sheet
+ * @returns Array of Review items
+ */
+export async function getReviews(): Promise<Review[]> {
   const doc = await getSheetDoc();
   const sheet = await getSheetByTitleCI(doc, "Reviews");
   const rows = await sheet.getRows();
@@ -17,13 +28,17 @@ export async function getReviews() {
   }));
 }
 
-// Fix review sync: match Speweek by `title_year` (strip year)
+/**
+ * Add a new review to the Google Sheet
+ * @param data - Review data to add
+ * @returns Success status
+ */
 export async function addReview(data: {
   id?: string;
   title: string;
   rating: number;
   date: string;
-}) {
+}): Promise<{ success: true }> {
   await ensureAuthorized();
   const doc = await getSheetDoc();
 
@@ -73,6 +88,10 @@ export async function addReview(data: {
   return { success: true };
 }
 
+/**
+ * Update an existing review in the Google Sheet
+ * @param data - Review data to update
+ */
 export async function updateReview(data: {
   id: string;
   title: string;
@@ -95,6 +114,10 @@ export async function updateReview(data: {
   revalidatePath("/dashboard/reviews");
 }
 
+/**
+ * Delete a review by ID
+ * @param id - The ID of the review to delete
+ */
 export async function deleteReview(id: string) {
   await ensureAuthorized();
   const doc = await getSheetDoc();

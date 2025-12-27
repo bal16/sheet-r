@@ -8,7 +8,9 @@ import type {
 } from "google-spreadsheet";
 import { headers } from "next/headers";
 
-// Add minimal sheet typings to avoid `any`
+/**
+ * Type definition for a row in the Google Sheet
+ */
 export type SheetRow = {
   get: (key: string) => string;
   assign: (data: Record<string, string>) => void;
@@ -16,13 +18,10 @@ export type SheetRow = {
   delete: () => Promise<void>;
 };
 
-export type SpeweekEvent = {
-  id: string;
-  theme: string;
-  added_month_year: string;
-  movies: { id: string; title_year: string; is_watched: boolean }[];
-};
-
+/**
+ * Ensure the user is authorized to access the sheet
+ * @returns The session object if authorized
+ */
 export async function ensureAuthorized() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) throw new Error("Unauthorized: Login required", { cause: 401 });
@@ -36,7 +35,12 @@ export async function ensureAuthorized() {
   return session;
 }
 
-// Helper: resolve a sheet by title (case-insensitive), ensure metadata loaded
+/**
+ * Get a sheet by title, case-insensitive
+ * @param doc - The Google Spreadsheet document
+ * @param title - The title of the sheet to retrieve
+ * @returns The matching GoogleSpreadsheetWorksheet
+ */
 export async function getSheetByTitleCI(
   doc: GoogleSpreadsheet,
   title: string

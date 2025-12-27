@@ -4,29 +4,41 @@ import { getSheetDoc } from "@/lib/google";
 import { revalidatePath } from "next/cache";
 import { ensureAuthorized, getSheetByTitleCI } from "./helper";
 
-export async function getQueue() {
+type QueueItem = {
+  id: string;
+  title: string;
+  type: "downlist" | "speweek";
+};
+
+/**
+ * Get the current queue from the Google Sheet
+ * @returns Array of Queue items
+ */
+export async function getQueue(): Promise<QueueItem[]> {
   const doc = await getSheetDoc();
   const sheet = await getSheetByTitleCI(doc, "Queue");
   const rows = await sheet.getRows();
 
-  // Urutan array = Urutan baris di sheet (Otomatis Rank)
   return rows.map((row) => ({
-    id: row.get("ref_id") as string, // Mapping ref_id ke id untuk konsistensi UI
-    title: row.get("title") as string,
-    type: row.get("origin") as "downlist" | "speweek",
+    id: row.get("ref_id"),
+    title: row.get("title"),
+    type: row.get("origin"),
   }));
 }
 
+/**
+ * Add a movie to the queue if it doesn't already exist
+ * @param movie - The movie to add to the queue
+ */
 export async function addToQueue(movie: {
   id: string;
   title: string;
-  origin: string;
+  origin: "downlist" | "speweek";
 }) {
   await ensureAuthorized();
   const doc = await getSheetDoc();
   const sheet = await getSheetByTitleCI(doc, "Queue");
 
-  // Cek duplikat dulu biar gak double
   const rows = await sheet.getRows();
   const exists = rows.find((r) => r.get("ref_id") === movie.id);
 
@@ -35,7 +47,7 @@ export async function addToQueue(movie: {
       [
         {
           ref_id: movie.id,
-          origin: movie.origin, // 'downlist' atau 'speweek'
+          origin: movie.origin,
           title: movie.title,
           added_at: new Date().toISOString(),
         },
@@ -47,9 +59,11 @@ export async function addToQueue(movie: {
   revalidatePath("/dashboard");
 }
 
-export async function updateQueueOrder(
-  newOrderItems: { id: string; title: string; type: string }[]
-) {
+/**
+ * Update the order of items in the queue
+ * @param newOrderItems - Array of Queue items in the new order
+ */
+export async function updateQueueOrder(newOrderItems: QueueItem[]) {
   await ensureAuthorized();
   const doc = await getSheetDoc();
   const sheet = await getSheetByTitleCI(doc, "Queue");
@@ -60,12 +74,11 @@ export async function updateQueueOrder(
     if (row) await row.delete();
   }
 
-  // Masukkan data baru sesuai urutan
   const rowsToAdd = newOrderItems.map((item) => ({
     ref_id: item.id,
     origin: item.type,
     title: item.title,
-    added_at: new Date().toISOString(), // Update timestamp atau keep old one
+    added_at: new Date().toISOString(),
   }));
 
   await sheet.addRows(rowsToAdd, { insert: true });
@@ -73,6 +86,10 @@ export async function updateQueueOrder(
   revalidatePath("/dashboard");
 }
 
+/**
+ * Remove a movie from the queue by its reference ID
+ * @param refId - The reference ID of the movie to remove
+ */
 export async function removeFromQueue(refId: string) {
   await ensureAuthorized();
   const doc = await getSheetDoc();

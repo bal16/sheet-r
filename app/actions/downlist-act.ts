@@ -4,7 +4,19 @@ import { getSheetDoc } from "@/lib/google";
 import { ensureAuthorized, getSheetByTitleCI, type SheetRow } from "./helper";
 import { revalidatePath } from "next/cache";
 
-export async function getDownlist() {
+type DownList = {
+  id: string;
+  title: string;
+  year: number;
+  is_downloaded: boolean;
+  is_watched: boolean;
+};
+
+/**
+ * Get the downlist from the Google Sheet
+ * @returns Array of DownList items
+ */
+export async function getDownlist(): Promise<DownList[]> {
   const doc = await getSheetDoc();
   const sheet = await getSheetByTitleCI(doc, "Downlist");
   const rows = await sheet.getRows();
@@ -18,6 +30,11 @@ export async function getDownlist() {
   }));
 }
 
+/**
+ * Add a new item to the downlist
+ * @param title - Movie title
+ * @param year - Release year
+ */
 export async function addToDownlist(title: string, year: string) {
   await ensureAuthorized();
   const doc = await getSheetDoc();
@@ -40,6 +57,11 @@ export async function addToDownlist(title: string, year: string) {
   revalidatePath("/dashboard/downlist");
 }
 
+/**
+ * Toggle the download status of a downlist item
+ * @param id - The ID of the downlist item
+ * @param currentStatus - The current download status
+ */
 export async function toggleDownloadStatus(id: string, currentStatus: boolean) {
   await ensureAuthorized();
   const doc = await getSheetDoc();
@@ -55,6 +77,10 @@ export async function toggleDownloadStatus(id: string, currentStatus: boolean) {
   revalidatePath("/dashboard/downlist");
 }
 
+/**
+ * Delete a downlist item by ID
+ * @param id - The ID of the downlist item to delete
+ */
 export async function deleteDownlistItem(id: string) {
   await ensureAuthorized();
   const doc = await getSheetDoc();
@@ -67,7 +93,10 @@ export async function deleteDownlistItem(id: string) {
   revalidatePath("/dashboard/downlist");
 }
 
-// Edit Downlist item (title, year)
+/**
+ * Edit Downlist item (title, year)
+ * @param data - new downlist item
+ */
 export async function updateDownlistItem(data: {
   id: string;
   title: string;
@@ -90,7 +119,11 @@ export async function updateDownlistItem(data: {
   revalidatePath("/dashboard/downlist");
 }
 
-// Explicit setter for is_downloaded to avoid client/server mismatch
+/**
+ * Explicit setter for is_downloaded to avoid client/server mismatch
+ * @param id  - The ID of the downlist item
+ * @param is_downloaded - The new download status
+ */
 export async function setDownloadStatus(id: string, is_downloaded: boolean) {
   await ensureAuthorized();
   const doc = await getSheetDoc();

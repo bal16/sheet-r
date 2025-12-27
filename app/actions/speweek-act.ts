@@ -1,10 +1,25 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ensureAuthorized, getSheetByTitleCI, type SpeweekEvent } from "./helper";
+import { ensureAuthorized, getSheetByTitleCI } from "./helper";
 import { getSheetDoc } from "@/lib/google";
 
-// Helper to make a stable event id from theme + month-year
+/**
+ * Type definition for a Speweek event
+ */
+type SpeweekEvent = {
+  id: string;
+  theme: string;
+  added_month_year: string;
+  movies: { id: string; title_year: string; is_watched: boolean }[];
+};
+
+/**
+ * Generate a stable event ID based on theme and added month-year
+ * @param theme - The theme of the Speweek event
+ * @param added_month_year - The month and year the event was added
+ * @returns A stable string ID for the event
+ */
 function makeEventId(theme: string, added_month_year: string): string {
   return `${theme
     .trim()
@@ -12,8 +27,10 @@ function makeEventId(theme: string, added_month_year: string): string {
     .replace(/\s+/g, "-")}:${added_month_year.trim()}`;
 }
 
-
-
+/**
+ * Get all Speweek events from the Google Sheet
+ * @returns Array of SpeweekEvent items
+ */
 export async function getSpeweek(): Promise<SpeweekEvent[]> {
   const doc = await getSheetDoc();
   const sheet = await getSheetByTitleCI(doc, "Speweek");
@@ -54,6 +71,10 @@ export async function getSpeweek(): Promise<SpeweekEvent[]> {
   return Array.from(groups.values());
 }
 
+/**
+ * Add a new Speweek event placeholder to the Google Sheet
+ * @param data - Speweek event data
+ */
 export async function addSpeweekEvent(data: {
   theme: string;
   added_month_year: string;
@@ -81,6 +102,10 @@ export async function addSpeweekEvent(data: {
   revalidatePath("/dashboard/speweek");
 }
 
+/**
+ * Add a new movie to an existing Speweek event in the Google Sheet
+ * @param data - Movie data to add to the Speweek event
+ */
 export async function addToSpeweek(data: {
   title: string;
   release_year: string;
@@ -120,6 +145,10 @@ export async function addToSpeweek(data: {
   revalidatePath("/dashboard/speweek");
 }
 
+/**
+ * Delete a Speweek item by ID
+ * @param id - The ID of the Speweek item to delete
+ */
 export async function deleteSpeweekItem(id: string) {
   await ensureAuthorized();
   const doc = await getSheetDoc();
