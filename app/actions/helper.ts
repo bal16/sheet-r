@@ -2,7 +2,10 @@
 
 import { auth } from "@/lib/auth";
 import { checkSheetAccess } from "@/lib/google";
-import type { GoogleSpreadsheet, GoogleSpreadsheetWorksheet } from "google-spreadsheet";
+import type {
+  GoogleSpreadsheet,
+  GoogleSpreadsheetWorksheet,
+} from "google-spreadsheet";
 import { headers } from "next/headers";
 
 // Add minimal sheet typings to avoid `any`
@@ -20,17 +23,17 @@ export type SpeweekEvent = {
   movies: { id: string; title_year: string; is_watched: boolean }[];
 };
 
-// --- 0. SECURITY HELPER ---
-// Fungsi ini memastikan hanya user yang punya akses Editor yang bisa tulis data
 export async function ensureAuthorized() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized: Login required");
+  if (!session) throw new Error("Unauthorized: Login required", { cause: 401 });
 
   const hasAccess = await checkSheetAccess(session.user.email);
   if (!hasAccess)
-    throw new Error("Unauthorized: Insufficient Sheet Permissions");
+    throw new Error("Unauthorized: Insufficient Sheet Permissions", {
+      cause: 403,
+    });
 
-  return session.user;
+  return session;
 }
 
 // Helper: resolve a sheet by title (case-insensitive), ensure metadata loaded
