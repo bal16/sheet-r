@@ -66,7 +66,7 @@ export function NavUser() {
         fetchOptions: {
           onSuccess: () => {
             toast.success("Signed out successfully");
-            router.refresh();
+            router.replace("/");
           },
         },
       });
