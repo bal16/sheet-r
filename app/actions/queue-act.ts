@@ -11,8 +11,8 @@ export async function getQueue() {
 
   // Urutan array = Urutan baris di sheet (Otomatis Rank)
   return rows.map((row) => ({
-    id: row.get("ref_id"), // Mapping ref_id ke id untuk konsistensi UI
-    title: row.get("title"),
+    id: row.get("ref_id") as string, // Mapping ref_id ke id untuk konsistensi UI
+    title: row.get("title") as string,
     type: row.get("origin") as "downlist" | "speweek",
   }));
 }
