@@ -26,7 +26,7 @@ interface QueueListProps {
 
 export function QueueList({ initialItems }: QueueListProps) {
   const [items, setItems] = useState<QueueItem[]>(initialItems);
-  const { reorderQueue, removeFromQueue } = useQueue();
+  const { reorderQueue, removeFromQueue, isReordering } = useQueue();
   const [reviewItem, setReviewItem] = useState<QueueItem | null>(null);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
 
@@ -35,24 +35,20 @@ export function QueueList({ initialItems }: QueueListProps) {
     setItems(initialItems);
   }, [initialItems]);
 
-  // Fungsi saat drag selesai
   const onDragEnd = async (result: DropResult) => {
     if (!result.destination) return;
 
-    const previousItems = items;
-
-    // 1. Reorder Array di Client (Optimistic UI)
     const newItems = Array.from(items);
     const [reorderedItem] = newItems.splice(result.source.index, 1);
     newItems.splice(result.destination.index, 0, reorderedItem);
 
     setItems(newItems);
 
-    // 2. Simpan ke Google Sheet (kirim array baru yang sudah terurut)
     try {
       await reorderQueue(newItems);
+      toast.success("Queue reordered successfully");
     } catch {
-      setItems(previousItems);
+      setItems(items);
       toast.error("Failed to reorder queue");
     }
   };
@@ -66,7 +62,6 @@ export function QueueList({ initialItems }: QueueListProps) {
     if (!reviewItem) return;
 
     try {
-      // 1. Submit Review (Simpan ke Archive & Update Status)
       await addReview({
         id: reviewItem.id,
         title: values.title,
@@ -74,7 +69,6 @@ export function QueueList({ initialItems }: QueueListProps) {
         date: new Date().toISOString().split("T")[0],
       });
 
-      // 2. Remove from Queue (Hapus dari antrian)
       await removeFromQueue(reviewItem.id);
       setItems((prev) => prev.filter((i) => i.id !== reviewItem.id));
 
@@ -87,13 +81,12 @@ export function QueueList({ initialItems }: QueueListProps) {
   };
 
   const handleDelete = async (id: string) => {
-    const previousItems = items;
     setItems((prev) => prev.filter((i) => i.id !== id));
     try {
       await removeFromQueue(id);
       toast.success("Item removed from queue");
     } catch {
-      setItems(previousItems);
+      setItems(items);
       toast.error("Failed to remove item");
     }
   };
@@ -101,7 +94,7 @@ export function QueueList({ initialItems }: QueueListProps) {
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="queue">
+        <Droppable droppableId="queue" isDropDisabled={isReordering}>
           {(provided) => (
             <div
               {...provided.droppableProps}
@@ -109,7 +102,12 @@ export function QueueList({ initialItems }: QueueListProps) {
               className="space-y-2"
             >
               {items.map((item, index) => (
-                <Draggable key={item.id} draggableId={item.id} index={index}>
+                <Draggable
+                  key={item.id}
+                  draggableId={item.id}
+                  index={index}
+                  isDragDisabled={isReordering}
+                >
                   {(provided) => (
                     <div
                       ref={provided.innerRef}
