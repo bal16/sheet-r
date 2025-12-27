@@ -4,7 +4,7 @@ import { getSheetDoc } from "@/lib/google";
 import { revalidatePath } from "next/cache";
 import { ensureAuthorized, getSheetByTitleCI } from "./helper";
 
-type QueueItem = {
+export type QueueItem = {
   id: string;
   title: string;
   type: "downlist" | "speweek";

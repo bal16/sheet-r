@@ -3,14 +3,13 @@ import {
   updateQueueOrder,
   removeFromQueue,
   addToQueue,
+  type QueueItem,
 } from "@/app/actions/queue-act";
 
 export function useQueue() {
   const QueryClient = useQueryClient();
   const reorderMutation = useMutation({
-    mutationFn: async (
-      items: { id: string; title: string; type: string }[]
-    ) => {
+    mutationFn: async (items: QueueItem[]) => {
       await updateQueueOrder(items);
     },
     onSuccess: () => {
@@ -33,7 +32,7 @@ export function useQueue() {
     mutationFn: async (movie: {
       id: string;
       title: string;
-      origin: string;
+      origin: "downlist" | "speweek";
     }) => {
       await addToQueue(movie);
     },
